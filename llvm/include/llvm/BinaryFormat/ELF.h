@@ -317,6 +317,7 @@ enum {
   EM_BPF = 247,           // Linux kernel bpf virtual machine
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
+  EM_CPU0 = 999
 };
 
 // Object file classes.
@@ -792,6 +793,17 @@ enum {
 // ELF Relocation types for CSKY
 enum {
 #include "ELFRelocs/CSKY.def"
+};
+
+enum {
+  EF_CPU0_NOREORDER = 0x00000001,
+  EF_CPU0_PIC = 0x00000002,
+  EF_CPU0_ARCH_32 = 0x50000000,
+  EF_CPU0_ARCH = 0xf0000000
+};
+
+enum {
+#include "ELFRelocs/Cpu0.def"
 };
 
 #undef ELF_RELOC

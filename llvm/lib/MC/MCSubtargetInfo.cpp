@@ -55,6 +55,8 @@ void ClearImpliedBits(FeatureBitset &Bits, unsigned Value,
   }
 }
 
+bool Cpu0DisableUnrecognizedMessage = false;
+
 static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
                              ArrayRef<SubtargetFeatureKV> FeatureTable) {
   assert(SubtargetFeatures::hasFlag(Feature) &&
@@ -78,8 +80,9 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
       ClearImpliedBits(Bits, FeatureEntry->Value, FeatureTable);
     }
   } else {
-    errs() << "'" << Feature << "' is not a recognized feature for this target"
-           << " (ignoring feature)\n";
+    if (!Cpu0DisableUnrecognizedMessage)
+      errs() << "'" << Feature << "' is not a recognized feature for this target"
+        << " (ignoring feature)\n";
   }
 }
 
@@ -207,6 +210,11 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
+  // Disable recognized processor message. For CPU0
+  if (TargetTriple.getArch() == llvm::Triple::cpu0
+      || TargetTriple.getArch() == llvm::Triple::cpu0el)
+    Cpu0DisableUnrecognizedMessage = true;
+
   FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
   if (!TuneCPU.empty())
     CPUSchedModel = &getSchedModelForCPU(TuneCPU);
@@ -279,8 +287,9 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
                      ProcFeatures);
     }
   } else {
-    errs() << "'" << Feature << "' is not a recognized feature for this target"
-           << " (ignoring feature)\n";
+    if (!Cpu0DisableUnrecognizedMessage)
+      errs() << "'" << Feature << "' is not a recognized feature for this target"
+        << " (ignoring feature)\n";
   }
 
   return FeatureBits;
@@ -312,9 +321,11 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
 
   if (!CPUEntry) {
     if (CPU != "help") // Don't error if the user asked for help.
-      errs() << "'" << CPU
-             << "' is not a recognized processor for this target"
-             << " (ignoring processor)\n";
+      if (TargetTriple.getArch() != llvm::Triple::cpu0
+          && TargetTriple.getArch() != llvm::Triple::cpu0el)
+        errs() << "'" << CPU
+          << "' is not a recognized processor for this target"
+          << " (ignoring processor)\n";
     return MCSchedModel::GetDefaultSchedModel();
   }
   assert(CPUEntry->SchedModel && "Missing processor SchedModel value");
